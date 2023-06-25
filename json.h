@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <type_traits>
 #ifndef __JSON_H__
 
@@ -30,6 +31,19 @@ struct JSONObject {
     static bool canEatToken(std::string_view json, std::string_view token);
     static char unescape_char(char ch);
 
+    bool asBool();
+    int asInt();
+    double asDouble();
+    std::string asString();
+    JSONMap asMap();
+    JSONList asList();
+
+    JSONObject& operator[](const std::string& key);
+    JSONObject& operator[](size_t index);
+
+    bool operator==(std::monostate);
+    bool operator!=(std::monostate);
+
     template<typename T>
     static std::optional<T> tryParseNum(std::string_view str) {
         T value;
@@ -44,19 +58,18 @@ struct JSONObject {
         }
         return std::nullopt;
     }
-
-    template <class ...Fs>
-    struct overloaded : Fs... {
-        using Fs::operator()...;
-    };
-
-    template <class ...Fs>
-    overloaded(Fs...) -> overloaded<Fs...>;
-
-    // Function to print values of std::variant
-    void print() const;
 };
 
+  
+template <class ...Fs>
+struct overloaded : Fs... {
+    using Fs::operator()...;
+};
+
+template <class ...Fs>
+overloaded(Fs...) -> overloaded<Fs...>;
+
+std::ostream& operator<<(std::ostream& os, const JSONObject& obj);
 
 } // namespace Json
 

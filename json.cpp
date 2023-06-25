@@ -1,6 +1,7 @@
 #include "json.h"
 #include <algorithm>
 #include <cstddef>
+#include <string>
 #include <utility>
 #include <variant>
 #include <charconv>
@@ -82,7 +83,6 @@ namespace Json {
             JSONMap res;
             size_t i = 1;
             while (i < json.size()) {
-                //std::cout<<json.substr(i) << std::endl << "-------" << std::endl;
                 if (json[i] == '}') {
                     i++;
                     break;
@@ -128,40 +128,40 @@ namespace Json {
         return {jsonobj, 0};
     }
 
-    void JSONObject::print() const {
+    std::ostream& operator<<(std::ostream& os, const JSONObject& obj){
             std::visit(
                 overloaded{
-                [this] (const JSONList& list){
-                    std::cout << "[";
+                [&] (const JSONList& list){
+                    os << "[";
                     for (int i = 0; i < list.size(); i++) {
-                        list[i].print();
+                        os<<list[i];
                         if(i != list.size() -1) {
-                            std::cout << ", ";
+                            os << ", ";
                         }
                     }
-                    std::cout << "]";
+                    os << "]";
                 },
-                [this] (const JSONMap& map) {
-                    std::cout << "{";
+                [&] (const JSONMap& map) {
+                    os << "{";
                     for (auto it = map.begin(); it != map.end(); it++) {
-                        std::cout << it->first << ": ";
-                        it->second.print();
-                    if (std::next(it) != map.end() )
-                        std::cout << ", ";
-                    }
-                    std::cout << "}";
+                        os << it->first << ": ";
+                        os << it->second;
+                        if (std::next(it) != map.end() )
+                            os << ", ";
+                        }
+                        os << "}";
                 },
-                [this] (const std::monostate& mono) {
-                    std::cout << "null";
+                [&] (const std::monostate& mono) {
+                    os << "null";
                 },
-                [this] (const bool value) {
-                    std::cout << (value ? "true":"false");
+                [&] (const bool value) {
+                    os << (value ? "true":"false");
                 },
-                [this] (const auto& value) {
-                    std::cout << value;
+                [&] (const auto& value) {
+                    os << value;
                 }
-            }, inner);
-    
+            }, obj.inner);
+        return os;
     }
     
     char JSONObject::unescape_char(char ch) {
@@ -176,5 +176,52 @@ namespace Json {
             case 'a' : return '\a';
             default: return ch;
         }
+    }
+
+    bool JSONObject::asBool() {
+        return std::get<bool>(inner);
+    }
+
+    int JSONObject::asInt(){
+        return std::get<int>(inner);
+    }
+
+    double JSONObject::asDouble() {
+        return std::get<double>(inner);
+    }
+
+    std::string JSONObject::asString() {
+        return std::get<std::string>(inner);
+    }
+
+    JSONMap JSONObject::asMap() {
+        return std::get<JSONMap>(inner);
+    }
+    
+    JSONList JSONObject::asList() {
+        return std::get<JSONList>(inner);
+    }
+
+    JSONObject& JSONObject::operator[](const std::string& key) {
+         if (std::holds_alternative<JSONMap>(inner)) {
+            JSONMap& map = std::get<JSONMap>(inner);
+            if (!map.contains(key)) {
+                map[key] = JSONObject{std::monostate()};
+            }
+            return map[key];
+        }
+        throw std::runtime_error("JSONObject does not hold a JSONMap!");
+    }
+
+    JSONObject& JSONObject::operator[](size_t index) {
+        return std::get<JSONList>(inner)[index];
+    }
+
+    bool JSONObject::operator==(std::monostate) {
+        return std::holds_alternative<std::monostate>(inner);
+    }
+
+    bool JSONObject::operator!=(std::monostate) {
+        return !operator==(std::monostate());
     }
 }
