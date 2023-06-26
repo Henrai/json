@@ -6,6 +6,7 @@
 #include <variant>
 #include <charconv>
 #include <regex>
+#include <fstream>
 
 namespace Json {
 
@@ -19,9 +20,10 @@ namespace Json {
     }
 
     std::pair<JSONObject, size_t> JSONObject::parse(std::string_view json) {
+        static const std::string WHITE_SPACES = " \n\t\r\0\f\v"; 
         if(json.empty())  {
             return {JSONObject{std::monostate{}} , 0};
-        } else if (size_t offset= json.find_first_not_of(" \n\t\r\0\f\v"); offset != 0 && offset != std::string::npos) {
+        } else if (size_t offset= json.find_first_not_of(WHITE_SPACES); offset != 0 && offset != std::string::npos) {
             auto [obj, eaten] = parse(json.substr(offset));
             return {obj, eaten+offset};
         } else if ('0' <= json[0] && json[0] <= '9' || json[0] == '+' || json[0] == '-') {
@@ -83,10 +85,15 @@ namespace Json {
             JSONMap res;
             size_t i = 1;
             while (i < json.size()) {
+                while (WHITE_SPACES.find(json[i]) != std::string::npos) {
+                    i++;
+                }
+
                 if (json[i] == '}') {
                     i++;
                     break;
                 }
+
                 auto [key_obj, key_eaten] = parse(json.substr(i));
                 if (key_eaten == 0) {
                     i = 0; 
@@ -197,7 +204,7 @@ namespace Json {
     JSONMap JSONObject::asMap() {
         return std::get<JSONMap>(inner);
     }
-    
+
     JSONList JSONObject::asList() {
         return std::get<JSONList>(inner);
     }
@@ -223,5 +230,28 @@ namespace Json {
 
     bool JSONObject::operator!=(std::monostate) {
         return !operator==(std::monostate());
+    }
+
+    JSONObject JSONObject::fromFile(std::string_view filename) {
+        std::ifstream file(filename);
+        if(file.is_open()) {
+            size_t size = 0;
+            file.seekg(0, std::ios::end);
+            size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::string str;
+            str.reserve(size);
+
+            file.read(&str[0], size);
+            file.close();
+            auto [obj, eaten] = parse(str);
+            if (eaten == size) {
+                return obj;
+            } else {
+                return JSONObject{std::monostate()};
+            }
+        }
+        return JSONObject{std::monostate()};
     }
 }

@@ -7,15 +7,16 @@ using namespace std;
 int main() {
     string_view str = 
     R"JSON({
-    'aa': "BB",
+    "aa": "BB",
     "cc": {
         "a": 10,
         "B": [1,2],
         "c": null,
         "d": true,
-        'e': false,
+        "e": false,
    }})JSON";
     auto [jsonObj, eaten] = Json::JSONObject::parse(str);
+    cout << str.size() <<" "<< eaten << endl;
     Json::JSONObject obj = Json::JSONObject{jsonObj.inner};
     cout << obj << endl;
     auto aa = obj["aa"];

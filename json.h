@@ -27,6 +27,8 @@ struct JSONObject {
         JSONList,
         JSONMap 
     > inner;
+    
+    static JSONObject fromFile(std::string_view filename);
     static std::pair<JSONObject, size_t> parse(std::string_view json);
     static bool canEatToken(std::string_view json, std::string_view token);
     static char unescape_char(char ch);
