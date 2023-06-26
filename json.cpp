@@ -232,21 +232,24 @@ namespace Json {
         return !operator==(std::monostate());
     }
 
-    JSONObject JSONObject::fromFile(std::string_view filename) {
+   JSONObject JSONObject::fromFile(std::string_view filename) {
         std::ifstream file(filename);
         if(file.is_open()) {
-            size_t size = 0;
-            file.seekg(0, std::ios::end);
-            size = file.tellg();
-            file.seekg(0, std::ios::beg);
-
-            std::string str;
-            str.reserve(size);
-
-            file.read(&str[0], size);
+            std::cout << "file is open" << std::endl;
+            std::string str = "";
+            
+            std::string line;
+            while (std::getline(file, line)) {
+                str += line;
+                printf("%s", line.c_str());
+            }
             file.close();
+
+            std::cout << str << std::endl;
             auto [obj, eaten] = parse(str);
-            if (eaten == size) {
+            std::cout << eaten << " " << str.size() << std::endl;
+            std::cout << obj << std::endl;
+            if (eaten == str.size()) {
                 return obj;
             } else {
                 return JSONObject{std::monostate()};
