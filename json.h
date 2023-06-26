@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 #ifndef __JSON_H__
 
 #include <charconv>
@@ -17,6 +18,9 @@ struct JSONObject;
 
 using JSONList = std::vector<JSONObject>;
 using JSONMap =  std::unordered_map<std::string, JSONObject>;
+using JSONMapValue = std::pair<std::string, JSONObject>;
+using value_type = std::variant<JSONObject, JSONMapValue>;
+
 struct JSONObject {
     std::variant<
         std::monostate,
@@ -60,6 +64,66 @@ struct JSONObject {
         }
         return std::nullopt;
     }
+    struct iterator {
+        std::variant<JSONList::iterator, JSONMap::iterator> itr;
+        value_type operator*() {
+            if (isList()) {
+                return {*get_list_itr()}; 
+            } else {
+                return {*get_map_itr()}; 
+            }
+        }
+
+        iterator& operator++() {
+            if (isList()) {
+                ++get_list_itr();
+            } else {
+                ++get_map_itr();
+            }
+            return *this;
+        }
+
+        bool operator!=(iterator& it) {
+            if (isList() && it.isList()) {
+                return get_list_itr() != it.get_list_itr(); 
+            } else if (!isList() && !it.isList()) {
+                return get_map_itr() != it.get_map_itr();
+            } else {
+                return false;
+            }
+        }
+
+        bool isList() {
+            return std::holds_alternative<JSONList::iterator>(itr);
+        }
+
+        JSONList::iterator& get_list_itr() {
+            return std::get<JSONList::iterator>(itr);
+        }
+        
+        JSONMap::iterator& get_map_itr()  {
+            return std::get<JSONMap::iterator>(itr);
+        }
+    };
+
+    iterator begin() {
+        if (std::holds_alternative<JSONList>(inner)) {
+            return iterator{std::get<JSONList>(inner).begin()}; 
+        } if( std::holds_alternative<JSONMap>(inner)) {
+            return iterator{std::get<JSONMap>(inner).begin()};
+        }
+        throw std::runtime_error("JSONObject does not hold a iteratable object!");
+    }
+    
+    iterator end() {
+        if (std::holds_alternative<JSONList>(inner)) {
+            return iterator{std::get<JSONList>(inner).end()}; 
+        } if( std::holds_alternative<JSONMap>(inner)) {
+            return iterator{std::get<JSONMap>(inner).end()};
+        }
+        throw std::runtime_error("JSONObject does not hold a iteratable object!");
+    }
+    
 };
 
   
